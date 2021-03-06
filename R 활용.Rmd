@@ -49,7 +49,7 @@ $$
 library(tuber)
 
 # Youtube Data API v3
-yt_oauth("466133419097-md2vst7hfu391v87euekdthkv3fkn25e.apps.googleusercontent.com", "fQMQvdIEqa_AUG-W5GL8TFl6")
+yt_oauth("본인의 것으로 해주세용", "여기도ㅎㅎ")
 
 # 채널 id
 ebiz <- "UC-XtrkSxacpIu5FX9T_HLdg"
