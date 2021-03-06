@@ -1,0 +1,158 @@
+---
+title: "R 활용"
+output: html_document
+---
+
+## 헤더
+
+#### 헤더1
+
+*기울인 글씨*
+
+일반 글씨
+
+**굵은 글씨**
+
+-   순서 없는 목록
+
+    -   하위 항목
+
+1.  순서 있는 목록
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+[아주대 포털](portal.ajou.ac.kr)
+
+[이미지]()
+
+> 인용
+
+| Col1 | Col2 | Col3 |
+|------|------|------|
+|      |      |      |
+|      |      |      |
+|      |      |      |
+
+$y = ax$
+
+$$
+y = ax
+$$
+
+```{r}
+library(tuber)
+
+# Youtube Data API v3
+yt_oauth("466133419097-md2vst7hfu391v87euekdthkv3fkn25e.apps.googleusercontent.com", "fQMQvdIEqa_AUG-W5GL8TFl6")
+
+# 채널 id
+ebiz <- "UC-XtrkSxacpIu5FX9T_HLdg"
+
+# 채널 정보 가져오기
+get_channel_stats(ebiz)
+ebiz_stats <- get_all_channel_video_stats(ebiz)
+```
+
+```{r}
+# 데이터 구조 확인하기
+str(ebiz_stats)
+```
+
+```{r}
+
+# 문자형 변수 숫자로 전환
+ebiz_stats$viewCount <- as.numeric(ebiz_stats$viewCount)
+ebiz_stats$likeCount <- as.numeric(ebiz_stats$likeCount)
+ebiz_stats$commentCount <- as.numeric(ebiz_stats$commentCount)
+
+# 가장 많은 조회수를 기록한 영상
+ebiz_stats[which.max(ebiz_stats$viewCount),2]
+
+# 날짜형 변수로 전환
+ebiz_stats$publication_date <- as.Date(ebiz_stats$publication_date)
+
+
+# 기술통계량 확인
+summary(ebiz_stats)
+```
+
+```{r}
+# 가장 많은 조회수 top 10
+print(head(ebiz_stats[order(-ebiz_stats$viewCount),c(2,3)], 10))
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = ebiz_stats) + theme(axis.text.x=element_text(angle=45, hjust=1)) + ggtitle("이비즈 채널 시각화") +
+geom_line(aes(publication_date, viewCount), size=1.5, colour='green')
+```
+
+```{r}
+# 동영상의 id만 comment_id 변수에 저장
+comment_id <- ebiz_stats[order(-ebiz_stats$commentCount), 1]
+comments <- NULL
+
+# 영상의 댓글 모두 comments 변수에 저장
+for (i in 1:16) {
+  comment <- get_all_comments(comment_id[i])
+  comments <- rbind(comments, comment)
+}
+
+library(dplyr)
+library(stringr)
+library(tm)
+library(wordcloud)
+library(wordcloud2)
+library(KoNLP)
+
+buildDictionary(ext_dic = "woorimalsam")
+
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+ko.words = function(doc){
+  d = as.character(doc)
+  d = str_split(d, ' ')[[1]] ## 띄어쓰기(' ')를 기준으로 한 문장을 여러 단어로 나눔 
+  d = paste(d[nchar(d) <= 20], collapse = ' ') ## 각 단어들에서 20자 이하인 것만 선택하여 다시 문장으로 합침
+  
+  pos = paste(SimplePos09(d))
+  extracted = str_match(pos, '([가-힣]+)/N')
+  keyword = extracted[,2]
+  keyword[!is.na(keyword)]  
+}
+
+ko.nouns <- function(text) {
+  
+  keyword <- text %>%
+    as.character() %>%
+    gsub("[\r\n\t]", " ", .) %>%
+    trim() %>%
+    extractNoun()
+  keyword[!is.na(keyword)]
+  
+  
+}
+
+
+corpus <- Corpus(VectorSource(comments$textOriginal))
+
+dtm <- DocumentTermMatrix(corpus, control = list(tokenize = ko.nouns,
+                                                 removePunctuation=T,
+                                                 removeNumbers=T,
+                                                 wordLenghts=c(2,Inf)))
+
+findFreqTerms(dtm, lowfreq=5)
+
+
+freq <- sort(colSums(as.matrix(dtm)), decreasing=TRUE)
+wf <- data.frame(word=names(freq), freq=freq)
+
+# wordcloud(wf$word, wf$freq, min.freq=3, scale=c(4,.5) ,color=brewer.pal(8, "Dark2"))
+wordcloud2(wf, color = "random-dark")
+
+letterCloud(data=wf, word='이게뭐람', size=2, fontFamily='나눔바른고딕')
+```
